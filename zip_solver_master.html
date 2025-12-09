@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zip Algo Lab: Master Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #020617; 
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            color: #cbd5e1; 
+        }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Custom Scrollbar */
+        .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* Range Slider Styling */
+        input[type=range] { -webkit-appearance: none; background: transparent; cursor: pointer; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 14px; width: 14px;
+            border-radius: 50%; background: #818cf8; margin-top: -5px;
+            box-shadow: 0 0 10px rgba(129, 140, 248, 0.5); border: 2px solid #1e293b;
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; background: #334155; border-radius: 2px;
+        }
+        
+        /* Toggle Switch */
+        .toggle-checkbox:checked { right: 0; border-color: #68D391; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #10B981; }
+
+        /* Code Highlighting */
+        .code-line { padding: 2px 8px; border-left: 2px solid transparent; opacity: 0.6; transition: all 0.15s; }
+        .code-active { background: rgba(99, 102, 241, 0.1); border-left-color: #818cf8; opacity: 1; color: #e0e7ff; font-weight: 500; }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        
+        @keyframes progressStripe {
+            0% { background-position: 1rem 0; }
+            100% { background-position: 0 0; }
+        }
+        .progress-bar {
+            background-image: linear-gradient(45deg,rgba(255,255,255,.1) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.1) 75%,transparent 75%,transparent);
+            background-size: 1rem 1rem;
+            animation: progressStripe 0.8s linear infinite;
+            transition: width 0.1s linear; /* Smooth transition */
+        }
+        
+        /* Glass Panel Utility */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .toast {
+            position: absolute; top: 80px; left: 50%; transform: translateX(-50%) translateY(-10px);
+            padding: 8px 20px; border-radius: 99px; 
+            background: rgba(220, 38, 38, 0.9); border: 1px solid rgba(254, 202, 202, 0.2);
+            color: white; font-weight: 600; font-size: 12px; pointer-events: none;
+            opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 60;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-sm select-none">
+
+    <!-- Header -->
+    <header class="glass-panel border-b-0 border-b border-slate-700/50 py-3 px-6 flex justify-between items-center z-30 shrink-0 h-16">
+        <div class="flex items-center gap-4">
+            <div class="w-9 h-9 bg-gradient-to-br from-indigo-600 to-violet-700 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg shadow-indigo-500/20 border border-white/10">Z</div>
+            <div>
+                <h1 class="text-base font-bold text-slate-100 leading-none tracking-tight">Zip Algo Lab</h1>
+                <p class="text-[10px] text-indigo-400 font-bold tracking-[0.2em] uppercase mt-1 opacity-80">Master Edition</p>
+            </div>
+        </div>
+        
+        <div class="flex bg-slate-900/50 p-1 rounded-lg border border-white/5">
+             <button id="modeAuto" onclick="UI.switchMode('auto')" class="px-4 py-1.5 text-[10px] font-bold rounded-md text-white bg-indigo-600 shadow-md transition-all hover:bg-indigo-500">AI SOLVER</button>
+             <button id="modeManual" onclick="UI.switchMode('manual')" class="px-4 py-1.5 text-[10px] font-bold rounded-md text-slate-400 hover:text-white transition-all hover:bg-white/5">MANUAL PLAY</button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        
+        <!-- LEFT: VISUALIZATION -->
+        <div class="flex-1 flex flex-col p-4 gap-4 relative min-w-0 overflow-hidden">
+            <div class="glass-panel rounded-2xl flex flex-col relative shrink-0 h-full max-h-[calc(100vh-2rem)] shadow-2xl overflow-hidden border border-slate-700/50">
+                
+                <!-- Toolbar -->
+                <div class="p-3 border-b border-white/5 flex justify-between items-center bg-slate-900/30 shrink-0 h-14">
+                    <div class="flex gap-2 items-center">
+                        <button id="btnGen" onclick="Game.requestGeneration()" class="group relative overflow-hidden flex items-center justify-center gap-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold rounded-lg shadow-lg shadow-indigo-500/20 transition-all active:scale-95 disabled:opacity-80 disabled:cursor-wait w-32 border border-white/10">
+                            <div id="genProgress" class="absolute inset-0 bg-indigo-800 progress-bar hidden" style="width: 0%"></div>
+                            <span id="btnGenText" class="relative z-10 group-hover:scale-105 transition-transform flex items-center gap-2"><span>🎲</span> NEW GRID</span>
+                        </button>
+                        <button onclick="Game.reset()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-bold rounded-lg border border-white/5 transition-colors">
+                            RESET
+                        </button>
+                    </div>
+                    
+                    <!-- AI Controls -->
+                    <div id="aiControls" class="flex items-center gap-3">
+                        <div id="diffBadge" class="px-2.5 py-1 bg-slate-800/80 border border-slate-600/50 text-slate-400 text-[9px] font-bold rounded-md uppercase tracking-wide">
+                            Diff: --
+                        </div>
+                        <div id="cacheBadge" class="hidden px-2.5 py-1 bg-cyan-950/50 border border-cyan-500/30 text-cyan-400 text-[9px] font-bold rounded-md uppercase tracking-wide flex items-center gap-1.5 shadow-[0_0_10px_rgba(34,211,238,0.1)]">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span> Solved
+                        </div>
+                        
+                        <div class="h-6 w-px bg-white/10 mx-1"></div>
+                        
+                        <label class="flex items-center cursor-pointer gap-2 group">
+                            <div class="relative">
+                                <input type="checkbox" id="heatmapToggle" class="sr-only peer" onchange="Renderer.drawMaze()">
+                                <div class="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-orange-500 shadow-inner"></div>
+                            </div>
+                            <span class="text-[9px] font-bold text-slate-500 group-hover:text-slate-300 transition-colors uppercase">Heatmap</span>
+                        </label>
+
+                        <button id="btnPlay" onclick="Game.togglePlay()" class="ml-2 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded-lg shadow-lg shadow-emerald-500/20 border border-white/10 transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5">
+                            <span>▶</span> RUN AI
+                        </button>
+                    </div>
+
+                    <!-- Manual Controls -->
+                    <div id="manualControls" class="hidden flex items-center gap-2">
+                        <button onclick="Game.getHint()" class="px-3 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 hover:text-amber-200 text-[10px] font-bold rounded-lg border border-amber-600/30 transition-colors flex items-center gap-1.5">
+                            <span>💡</span> Hint
+                        </button>
+                        <button onclick="Game.manualUndo()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-bold rounded-lg border border-white/5 transition-colors flex items-center gap-1.5">
+                            <span>↩</span> Undo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Review Toolbar (Overlay) -->
+                <div id="reviewControls" class="hidden absolute top-14 left-0 right-0 p-2 border-b border-indigo-500/30 bg-indigo-950/90 backdrop-blur-md z-40 flex justify-between items-center animate-fade-in shadow-xl">
+                    <div class="text-indigo-200 text-[10px] font-bold uppercase tracking-widest pl-4 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse shadow-[0_0_8px_rgba(129,140,248,0.8)]"></span>
+                        Reviewing Step <span id="revStepDisplay" class="text-white font-mono bg-indigo-500/30 px-1.5 rounded ml-1">0</span>
+                    </div>
+                    <div class="flex gap-1.5 items-center">
+                        <div class="flex bg-slate-900/50 rounded-lg p-0.5 border border-white/5">
+                            <button id="btnRevStart" onclick="Game.reviewNav('start')" class="px-3 py-1 text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition text-xs">⏮</button>
+                            <button id="btnRevPrev" onclick="Game.reviewNav('prev')" class="px-3 py-1 text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition text-xs font-bold">◀ Prev</button>
+                            <div class="w-px bg-white/10 my-1 mx-0.5"></div>
+                            <button id="btnRevNext" onclick="Game.reviewNav('next')" class="px-3 py-1 text-indigo-300 hover:text-white hover:bg-indigo-600 rounded-md transition text-xs font-bold">Next ▶</button>
+                            <button id="btnRevEnd" onclick="Game.reviewNav('end')" class="px-3 py-1 text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition text-xs">⏭</button>
+                        </div>
+                        <button onclick="Game.endReview()" class="ml-2 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-white border border-red-500/30 rounded-lg text-[10px] font-bold transition-all">EXIT REVIEW</button>
+                    </div>
+                </div>
+
+                <!-- Canvas Area -->
+                <div class="relative flex items-center justify-center bg-slate-950 p-6 flex-1 group overflow-hidden">
+                    <canvas id="mainCanvas" width="600" height="600" class="shadow-2xl rounded-xl bg-slate-900/80 max-w-full h-auto cursor-crosshair border border-slate-700/50" style="aspect-ratio: 1/1; box-shadow: 0 0 40px rgba(0,0,0,0.3);"></canvas>
+                    
+                    <div id="toast" class="toast">Invalid Move</div>
+
+                    <!-- VICTORY OVERLAY -->
+                    <div id="victoryOverlay" class="hidden absolute inset-0 bg-slate-950/80 z-50 flex flex-col items-center justify-center backdrop-blur-sm animate-fade-in">
+                        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-2xl shadow-indigo-500/40 border border-white/10 transform -rotate-3">✓</div>
+                        <h2 id="winTitle" class="text-3xl font-black text-white mb-2 tracking-tight drop-shadow-md">SOLVED</h2>
+                        <div id="ratingBadge" class="mb-8 px-4 py-1.5 bg-slate-800 border border-slate-600 text-slate-300 text-[10px] font-bold uppercase tracking-[0.2em] rounded-full shadow-lg">
+                            Optimal Solution
+                        </div>
+                        
+                        <div class="bg-slate-900/80 px-8 py-5 rounded-2xl border border-white/10 flex gap-8 mb-8 shadow-xl backdrop-blur-md">
+                            <div class="text-center">
+                                <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Steps</div>
+                                <div id="finalSteps" class="text-2xl font-mono font-bold text-indigo-400">0</div>
+                            </div>
+                            <div class="w-px bg-white/10"></div>
+                            <div class="text-center">
+                                <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Backtracks</div>
+                                <div id="finalFails" class="text-2xl font-mono font-bold text-red-400">0</div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button onclick="Game.reset()" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 border border-white/10 text-slate-300 font-bold rounded-xl transition-all text-xs">Reset</button>
+                            <button id="btnReplay" onclick="Game.replayLastWin()" class="px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl shadow-lg shadow-violet-500/20 transition-all text-xs flex items-center gap-2 transform hover:scale-105 active:scale-95">
+                                <span>🎬</span> Watch Replay
+                            </button>
+                            <button id="btnReview" onclick="Game.startReview()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all text-xs flex items-center gap-2 transform hover:scale-105 active:scale-95">
+                                <span>🔍</span> Review Steps
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- FAIL OVERLAY -->
+                    <div id="failOverlay" class="hidden absolute inset-0 bg-slate-950/90 z-50 flex flex-col items-center justify-center backdrop-blur-md animate-fade-in">
+                        <div class="bg-red-500/20 text-red-500 border border-red-500/50 w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-2xl shadow-red-900/50">✕</div>
+                        <h2 class="text-3xl font-black text-white mb-1 tracking-tight">STUCK</h2>
+                        <p id="failReason" class="text-slate-400 text-xs mb-8 uppercase tracking-widest font-bold">Constraint Limit Reached</p>
+                        <div class="flex gap-3">
+                            <button onclick="Game.manualUndo()" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 border border-white/10 text-slate-300 font-bold rounded-xl transition text-xs">Backtrack</button>
+                            <button onclick="Game.generateNew()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition text-xs transform hover:scale-105">New Puzzle</button>
+                        </div>
+                    </div>
+
+                    <!-- CONFIRMATION MODAL -->
+                    <div id="confirmModal" class="hidden absolute inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm animate-fade-in">
+                        <div class="bg-slate-900 border border-slate-600 p-6 rounded-xl shadow-2xl max-w-sm w-full mx-4 transform scale-100 transition-all">
+                            <h3 class="text-lg font-bold text-white mb-2">Generate New Grid?</h3>
+                            <p class="text-slate-400 text-xs mb-6">
+                                You are about to generate a <span id="confirmSize" class="text-indigo-400 font-bold">8x8</span> grid with <span id="confirmPoints" class="text-indigo-400 font-bold">2</span> checkpoints. 
+                                <br>Larger grids may take longer to solve.
+                            </p>
+                            <div class="flex gap-3 justify-end">
+                                <button onclick="UI.hideConfirm(false)" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 text-xs font-bold transition">Cancel</button>
+                                <button onclick="UI.hideConfirm(true)" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 text-xs font-bold shadow-lg transition">Generate</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Config & Logs -->
+        <div class="w-full lg:w-80 glass-panel border-l border-white/5 flex flex-col shadow-2xl z-20 shrink-0">
+            <div id="strategyHeader" class="p-5 border-b border-white/5 bg-slate-900/50">
+                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Solver Engine</span>
+                <div class="relative">
+                    <select id="algoSelect" onchange="Game.changeAlgorithm()" class="w-full bg-slate-950 text-xs font-bold text-indigo-300 border border-slate-700 rounded-lg px-3 py-2.5 focus:ring-1 focus:ring-indigo-500 outline-none cursor-pointer appearance-none shadow-inner transition-colors hover:border-indigo-500/50">
+                         <option value="auto">✨ Smart Auto-Detect</option>
+                         <option value="basic">🐢 Basic (Blind Search)</option>
+                         <option value="intermediate">🧠 Intermediate (Degree)</option>
+                         <option value="advanced">🚀 Advanced (Parity+Lookahead)</option>
+                         <option value="godlike">⚡ Godlike (Full Constraints)</option>
+                    </select>
+                    <div class="absolute right-3 top-3 pointer-events-none text-indigo-500 text-xs">▼</div>
+                </div>
+                <p id="algoDesc" class="text-[10px] text-slate-400 mt-2.5 leading-relaxed h-8 opacity-80">
+                    Smart strategy selected based on grid complexity.
+                </p>
+            </div>
+
+            <div class="flex border-b border-white/5 bg-slate-900/30 p-1 gap-1">
+                <button onclick="UI.setTab('code')" id="tab-code" class="flex-1 py-1.5 text-[10px] font-bold rounded text-slate-400 hover:text-white hover:bg-white/5 transition">LOGIC</button>
+                <button onclick="UI.setTab('tree')" id="tab-tree" class="flex-1 py-1.5 text-[10px] font-bold rounded text-slate-400 hover:text-white hover:bg-white/5 transition">TREE</button>
+            </div>
+
+            <!-- TAB: LOGIC -->
+            <div id="content-code" class="flex-1 p-4 bg-slate-950 overflow-y-auto custom-scroll font-mono text-[10px] space-y-1.5 leading-relaxed text-slate-400">
+                <div id="code-l1" class="code-line">1. Target: Checkpoint[k]</div>
+                <div id="code-l2" class="code-line">2. Lookahead: Dead-end & Island Check</div>
+                <div id="code-l3" class="code-line">3. Heuristic: 2-Level Warnsdorff</div>
+                <div id="code-l4" class="code-line">4. For each neighbor n:</div>
+                <div id="code-l5" class="code-line pl-4">a. Check Parity to Final</div>
+                <div id="code-l6" class="code-line pl-4">b. Sim-Check: Does n kill others?</div>
+                <div id="code-l7" class="code-line pl-4">c. If Valid -> Recurse</div>
+                <div id="code-l8" class="code-line">5. If Dead End -> Backtrack</div>
+            </div>
+
+            <!-- TAB: TREE -->
+            <div id="content-tree" class="hidden flex-1 bg-slate-950 relative overflow-hidden flex flex-col">
+                <div class="absolute top-3 left-3 z-10 flex gap-3 text-[9px] font-bold bg-slate-900/90 px-2 py-1 rounded-md border border-white/10 backdrop-blur">
+                    <div class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-indigo-500"></div> Path</div>
+                    <div class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-red-500 opacity-70"></div> Fail</div>
+                </div>
+                <canvas id="treeCanvas" width="300" height="200" class="w-full h-full object-contain opacity-80"></canvas>
+            </div>
+            
+            <div class="p-5 border-y border-white/5 bg-slate-900/30">
+                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Settings</h3>
+                <div class="mb-5">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-[10px] font-bold text-slate-300">Grid Size</label>
+                        <span id="lblSize" class="text-[9px] font-bold text-white bg-indigo-600 px-2 py-0.5 rounded shadow-sm">4x4</span>
+                    </div>
+                    <input type="range" id="inpSize" min="2" max="8" value="4" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-[9px] text-slate-600 mt-1.5 font-mono">
+                        <span>2x2</span>
+                        <span>8x8</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-[10px] font-bold text-slate-300">Checkpoints</label>
+                        <span id="lblPoints" class="text-[9px] font-bold text-white bg-indigo-600 px-2 py-0.5 rounded shadow-sm">2</span>
+                    </div>
+                    <input type="range" id="inpPoints" min="0" max="8" value="2" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-[9px] text-slate-600 mt-1.5 font-mono">
+                        <span>Start Only</span>
+                        <span>Complex</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LOGS SECTION -->
+            <div class="flex-1 bg-slate-950 flex flex-col min-h-0">
+                <div class="flex border-b border-white/5 bg-slate-900/50">
+                    <button onclick="UI.setLogTab('event')" id="tab-log-event" class="flex-1 py-2 text-[9px] font-bold text-indigo-400 border-b-2 border-indigo-500 uppercase transition hover:bg-white/5">Event Log</button>
+                    <button onclick="UI.setLogTab('debug')" id="tab-log-debug" class="flex-1 py-2 text-[9px] font-bold text-slate-500 hover:text-slate-300 border-b-2 border-transparent uppercase transition hover:bg-white/5">Debug</button>
+                    <button onclick="UI.clearActiveLog()" class="px-3 py-2 text-[9px] font-bold text-slate-600 hover:text-white uppercase transition border-b-2 border-transparent hover:bg-white/5">Clear</button>
+                </div>
+                
+                <div id="logContainer" class="flex-1 p-4 overflow-y-auto custom-scroll font-mono text-[10px] space-y-2">
+                    <div class="text-slate-600 italic"># System initialized.</div>
+                </div>
+                
+                <div id="debugContainer" class="hidden flex-1 p-4 overflow-y-auto custom-scroll font-mono text-[10px] space-y-2">
+                    <div class="text-emerald-600 italic"># Debugging stream active.</div>
+                </div>
+            </div>
+            
+            <div class="p-3 border-t border-white/5 bg-slate-900/50 grid grid-cols-2 gap-3 shrink-0">
+                <div class="bg-slate-800/50 p-2 rounded border border-white/5 text-center">
+                    <div class="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Depth</div>
+                    <div id="statDepth" class="text-xs font-mono font-bold text-indigo-400 mt-0.5">0</div>
+                </div>
+                <div class="bg-slate-800/50 p-2 rounded border border-white/5 text-center">
+                    <div class="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Op. Count</div>
+                    <div id="statOps" class="text-xs font-mono font-bold text-slate-300 mt-0.5">0</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- 1. CORE & CONSTANTS ---
+        const Const = {
+            ALPHABET: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            MAZE_SIZE: 600,
+            OFFSET: 35
+        };
+
+        const Config = {
+            size: 4,
+            points: 2,
+            mode: 'auto',
+            algorithm: 'auto'
+        };
+
+        const State = {
+            grid: [],
+            checkpoints: {}, 
+            path: [], 
+            solutionPath: [], 
+            animPath: [],
+            visited: new Set(), 
+            visitCounts: [],
+            failedNodes: [], 
+            prunedCells: [], 
+            ghostTrails: [],
+            aiAgenda: {}, 
+            userAgenda: {},
+            running: false, finished: false, aborted: false,
+            isReviewing: false, isAnimatingWin: false, reviewIndex: 0,
+            steps: 0, failures: 0, manualBacktracks: 0, optimalSteps: 0, maxOps: 0,
+            gen: null, timer: null, winAnimTimer: null, isGenerating: false,
+            finalCheckpointPos: null, difficulty: 0,
+            pendingSize: 4 
+        };
+
+        function resetState() {
+            State.path = [];
+            State.visited = new Set();
+            State.finished = false;
+            State.aborted = false;
+            State.steps = 0;
+            State.failures = 0;
+            State.manualBacktracks = 0;
+            State.failedNodes = [];
+            State.prunedCells = [];
+            State.ghostTrails = [];
+            State.visitCounts = Array(Config.size).fill().map(() => Array(Config.size).fill(0));
+            State.isReviewing = false;
+            State.isAnimatingWin = false;
+            State.animPath = [];
+            State.finalCheckpointPos = null;
+            if(State.timer) clearTimeout(State.timer);
+            if(State.winAnimTimer) clearTimeout(State.winAnimTimer);
+            State.running = false;
+        }
+
+        // --- 2. RENDERER ---
+        const Renderer = {
+            cvs: null, ctx: null, treeCvs: null, treeCtx: null,
+
+            init: () => {
+                Renderer.cvs = document.getElementById('mainCanvas');
+                Renderer.ctx = Renderer.cvs.getContext('2d');
+                Renderer.treeCvs = document.getElementById('treeCanvas');
+                Renderer.treeCtx = Renderer.treeCvs.getContext('2d');
+            },
+
+            drawMaze: (ghostPath=null, ghostValid=true) => {
+                if(!State.grid || State.grid.length === 0) return;
+                const sz = Config.size;
+                const drawSize = Const.MAZE_SIZE - Const.OFFSET;
+                const cellSz = drawSize / sz;
+                const ctx = Renderer.ctx;
+                const hmToggle = document.getElementById('heatmapToggle');
+                const showHeatmap = hmToggle ? hmToggle.checked : false;
+
+                ctx.clearRect(0,0, Const.MAZE_SIZE, Const.MAZE_SIZE);
+                ctx.save(); ctx.translate(Const.OFFSET, Const.OFFSET);
+
+                // Grid Lines
+                ctx.strokeStyle = "#334155"; ctx.lineWidth = 1;
+                for(let i=0; i<=sz; i++) {
+                    ctx.beginPath(); ctx.moveTo(i*cellSz, 0); ctx.lineTo(i*cellSz, drawSize); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, i*cellSz); ctx.lineTo(drawSize, i*cellSz); ctx.stroke();
+                }
+
+                // Determine path
+                const path = State.isReviewing 
+                    ? State.solutionPath.slice(0, State.reviewIndex+1) 
+                    : (State.isAnimatingWin ? State.animPath : State.path);
+
+                // Heatmap & Visited Blocks
+                for(let r=0; r<sz; r++) {
+                    for(let c=0; c<sz; c++) {
+                        if(showHeatmap && State.visitCounts[r][c] > 0 && Config.mode === 'auto') {
+                            const i = Math.min(0.8, State.visitCounts[r][c] / 20);
+                            ctx.fillStyle = `rgba(249, 115, 22, ${Math.max(0.1, i)})`;
+                            ctx.fillRect(c*cellSz+1, r*cellSz+1, cellSz-2, cellSz-2);
+                        } 
+                        else if(path.some(p => p.r===r && p.c===c)) {
+                            // Path background
+                            ctx.fillStyle = "rgba(99, 102, 241, 0.15)";
+                            ctx.fillRect(c*cellSz+2, r*cellSz+2, cellSz-4, cellSz-4);
+                        }
+                    }
+                }
+
+                // Path Line
+                if(path.length > 1) {
+                    ctx.beginPath(); 
+                    ctx.strokeStyle = State.isReviewing ? "#a5b4fc" : "#6366f1"; 
+                    ctx.lineWidth = cellSz * 0.15; ctx.lineCap = "round"; ctx.lineJoin = "round";
+                    ctx.shadowColor = "#4f46e5"; ctx.shadowBlur = 12;
+                    let s = path[0]; ctx.moveTo(s.c*cellSz+cellSz/2, s.r*cellSz+cellSz/2);
+                    for(let i=1; i<path.length; i++) { let p = path[i]; ctx.lineTo(p.c*cellSz+cellSz/2, p.r*cellSz+cellSz/2); }
+                    ctx.stroke(); ctx.shadowBlur = 0;
+                }
+
+                // Checkpoints / Numbers
+                for(let r=0; r<sz; r++) {
+                    for(let c=0; c<sz; c++) {
+                        let val = State.grid[r][c];
+                        const isPathNode = path.some(p => p.r === r && p.c === c);
+                        
+                        if(val > 0) {
+                            const cx = c*cellSz+cellSz/2, cy = r*cellSz+cellSz/2;
+                            const isCheckpoint = State.grid[r][c] > 0;
+                            let color = isCheckpoint ? "#ef4444" : "#6366f1"; 
+                            if (val === 1) color = "#10b981"; 
+
+                            ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 6;
+                            ctx.fillStyle = color; 
+                            ctx.beginPath(); ctx.arc(cx, cy, cellSz*0.3, 0, Math.PI*2); ctx.fill();
+                            
+                            // Reduced font size multiplier from 0.4 to 0.3 for aesthetics
+                            const fontSize = Math.max(10, cellSz * 0.3);
+                            ctx.shadowColor = "transparent"; ctx.fillStyle = "white"; 
+                            ctx.font = `bold ${fontSize}px Inter`;
+                            
+                            // Removed the large +0.05 offset to center it properly
+                            ctx.textAlign = "center"; 
+                            ctx.textBaseline = "middle"; 
+                            ctx.fillText(val, cx, cy + (cellSz * 0.01)); // Tiny optical adjustment
+                        }
+                    }
+                }
+
+                ctx.restore();
+                // Labels
+                ctx.fillStyle = "#64748b"; ctx.font = "10px Inter"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                for(let i=0; i<sz; i++) { 
+                    ctx.fillText(Const.ALPHABET[i], Const.OFFSET + i*cellSz + cellSz/2, Const.OFFSET/2); 
+                    ctx.fillText(i+1, Const.OFFSET/2, Const.OFFSET + i*cellSz + cellSz/2); 
+                }
+            },
+
+            drawTree: () => {
+                const ctx = Renderer.treeCtx;
+                const w = Renderer.treeCvs.width, h = Renderer.treeCvs.height;
+                ctx.clearRect(0,0,w,h);
+                const maxDepth = Config.size * Config.size;
+                const xStep = w / (maxDepth + 2);
+                const centerY = h / 2;
+                ctx.strokeStyle = "#334155"; ctx.lineWidth = 1; 
+                ctx.beginPath(); ctx.moveTo(0, centerY); ctx.lineTo(w, centerY); ctx.stroke();
+                const path = State.isReviewing ? State.solutionPath : State.path;
+                ctx.strokeStyle = "#6366F1"; ctx.lineWidth = 2; ctx.beginPath();
+                for(let i=0; i<path.length; i++) {
+                    const x = (i+1) * xStep; 
+                    if(i===0) ctx.moveTo(x, centerY); else ctx.lineTo(x, centerY);
+                    ctx.fillStyle = i===path.length-1?"#fff":"#818CF8";
+                    ctx.beginPath(); ctx.arc(x, centerY, 2, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.stroke();
+            }
+        };
+
+        // --- 3. UI CONTROLLER ---
+        const UI = {
+            dom: (id) => document.getElementById(id),
+            setTxt: (id, txt) => { const e = UI.dom(id); if(e) e.innerText = txt; },
+            safeClass: (id, op, cls) => { const e = UI.dom(id); if(e) e.classList[op](cls); },
+            show: (id) => UI.safeClass(id, 'remove', 'hidden'),
+            hide: (id) => UI.safeClass(id, 'add', 'hidden'),
+            
+            log: (msg, cls="text-slate-400") => {
+                const con = UI.dom('logContainer');
+                const div = document.createElement('div');
+                div.className = `code-line ${cls}`;
+                div.innerText = `> ${msg}`;
+                con.insertBefore(div, con.firstChild);
+                if(con.children.length > 50) con.lastChild.remove();
+            },
+
+            debug: (msg, cls="text-indigo-300") => {
+                const con = UI.dom('debugContainer');
+                const div = document.createElement('div');
+                div.className = `code-line ${cls}`;
+                div.innerText = `[DBG] ${msg}`;
+                con.insertBefore(div, con.firstChild);
+                if(con.children.length > 50) con.lastChild.remove();
+            },
+            
+            clearLog: () => UI.dom('logContainer').innerHTML = '',
+            clearDebug: () => UI.dom('debugContainer').innerHTML = '',
+            clearActiveLog: () => {
+                const isEvent = !UI.dom('logContainer').classList.contains('hidden');
+                if (isEvent) UI.clearLog();
+                else UI.clearDebug();
+            },
+
+            setLogTab: (tab) => {
+                if (tab === 'event') {
+                    UI.show('logContainer'); UI.hide('debugContainer');
+                    UI.dom('tab-log-event').classList.add('border-indigo-500', 'text-indigo-400');
+                    UI.dom('tab-log-event').classList.remove('border-transparent', 'text-slate-500');
+                    UI.dom('tab-log-debug').classList.remove('border-indigo-500', 'text-indigo-400');
+                    UI.dom('tab-log-debug').classList.add('border-transparent', 'text-slate-500');
+                } else {
+                    UI.hide('logContainer'); UI.show('debugContainer');
+                    UI.dom('tab-log-debug').classList.add('border-indigo-500', 'text-indigo-400');
+                    UI.dom('tab-log-debug').classList.remove('border-transparent', 'text-slate-500');
+                    UI.dom('tab-log-event').classList.remove('border-indigo-500', 'text-indigo-400');
+                    UI.dom('tab-log-event').classList.add('border-transparent', 'text-slate-500');
+                }
+            },
+            
+            toast: (msg) => {
+                const t = UI.dom('toast');
+                t.innerText = msg;
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 2000);
+            },
+            
+            updateStats: () => {
+                UI.setTxt('statDepth', State.path.length);
+                UI.setTxt('statOps', `${State.steps} / ${State.maxOps || '∞'}`);
+            },
+            
+            updateAlgoDesc: (alg) => {
+                const map = {
+                    'auto': "✨ Smart Auto-Detect: Chooses best strat based on grid size.",
+                    'basic': "🐢 Basic: Random blind search (Backtracking). Slow.",
+                    'intermediate': "🧠 Intermediate: Degree Heuristic (Warnsdorff).",
+                    'advanced': "🚀 Advanced: 2-Level Warnsdorff + Parity Pruning.",
+                    'godlike': "⚡ Godlike: Full Connectivity Check + Dead-End Prediction."
+                };
+                UI.setTxt('algoDesc', map[alg] || map['auto']);
+            },
+            
+            updatePointLimits: () => {
+                const sz = Config.size;
+                const max = sz*sz;
+                UI.dom('inpPoints').max = max;
+                UI.dom('inpPoints').value = Math.min(UI.dom('inpPoints').value, max);
+                UI.updatePointsLabel();
+            },
+            
+            updatePointsLabel: () => {
+                const v = parseInt(UI.dom('inpPoints').value);
+                const txt = v === 0 ? "Fill Only" : (v === 1 ? "Start Only" : v);
+                UI.setTxt('lblPoints', txt);
+            },
+            
+            getGridPos: (e) => {
+                const rect = Renderer.cvs.getBoundingClientRect();
+                const scaleX = Renderer.cvs.width / rect.width;
+                const scaleY = Renderer.cvs.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX - Const.OFFSET;
+                const y = (e.clientY - rect.top) * scaleY - Const.OFFSET;
+                const sz = Config.size;
+                const cellSz = (Const.MAZE_SIZE - Const.OFFSET) / sz;
+                if(x < 0 || y < 0) return null;
+                const c = Math.floor(x / cellSz);
+                const r = Math.floor(y / cellSz);
+                if(r >= 0 && r < sz && c >= 0 && c < sz) return {r, c};
+                return null;
+            },
+
+            setDifficulty: (score) => {
+                let label = "EASY";
+                let color = "text-green-400 border-green-600";
+                if (score > 30) { label = "MEDIUM"; color = "text-yellow-400 border-yellow-600"; }
+                if (score > 60) { label = "HARD"; color = "text-orange-400 border-orange-600"; }
+                if (score > 85) { label = "EXPERT"; color = "text-red-400 border-red-600"; }
+                const badge = UI.dom('diffBadge');
+                badge.className = `px-2 py-0.5 bg-slate-800 border text-[9px] font-bold rounded uppercase tracking-wide ${color}`;
+                badge.innerText = `Diff: ${label} (${score})`;
+            },
+
+            updateGenProgress: (percent, label="") => {
+                const bar = UI.dom('genProgress');
+                const txt = UI.dom('btnGenText');
+                
+                if (!UI.maxGenPercent) UI.maxGenPercent = 0;
+                let displayPercent = Math.max(UI.maxGenPercent, percent);
+                UI.maxGenPercent = displayPercent;
+                
+                if (displayPercent < 100) {
+                    bar.style.width = `${displayPercent}%`;
+                    bar.classList.remove('hidden');
+                    const text = label ? `${label} ${Math.floor(displayPercent)}%` : `${Math.floor(displayPercent)}%`;
+                    txt.innerHTML = `<span>${text}</span>`;
+                } else {
+                    bar.style.width = '100%';
+                    setTimeout(() => {
+                        bar.classList.add('hidden');
+                        bar.style.width = '0%';
+                        txt.innerHTML = `<span>🎲</span> NEW GRID`;
+                        UI.maxGenPercent = 0;
+                    }, 500);
+                }
+            },
+            
+            // Allow manual text change of Gen button without breaking progress bar
+            setGenButtonText: (text) => {
+                 const btn = UI.dom('btnGenText');
+                 if(btn) btn.innerHTML = `<span>🎲</span> ${text}`;
+            },
+
+            playWinAnimation: (showModal = true) => {
+                // Determine Mode for Replay Button State
+                const btnReplay = UI.dom('btnReplay');
+                if (btnReplay) {
+                    if (Config.mode === 'manual') {
+                        btnReplay.disabled = true;
+                        btnReplay.classList.add('opacity-50', 'cursor-not-allowed', 'grayscale');
+                        btnReplay.innerHTML = '<span>🚫</span> No Replay';
+                    } else {
+                        btnReplay.disabled = false;
+                        btnReplay.classList.remove('opacity-50', 'cursor-not-allowed', 'grayscale');
+                        btnReplay.innerHTML = '<span>🎬</span> Watch Replay';
+                    }
+                }
+
+                if(showModal) {
+                    UI.show('victoryOverlay');
+                    UI.setTxt('finalSteps', State.solutionPath.length || State.path.length);
+                    UI.setTxt('finalFails', State.failures);
+                    const opt = State.optimalSteps;
+                    const actual = State.solutionPath.length || State.path.length;
+                    let rating = "Optimal Solution";
+                    let color = "text-indigo-400 border-indigo-600";
+                    if(actual > opt) { rating = "Sub-Optimal"; color = "text-yellow-400 border-yellow-600"; }
+                    const badge = UI.dom('ratingBadge');
+                    badge.className = `mb-5 px-3 py-1 bg-slate-800 border text-[10px] font-bold uppercase tracking-widest rounded-full ${color}`;
+                    badge.innerText = rating;
+                } else {
+                    UI.hide('victoryOverlay');
+                }
+                State.isAnimatingWin = true;
+                State.animPath = [];
+                let i = 0;
+                const fullPath = State.solutionPath.length > 0 ? State.solutionPath : State.path;
+                if(State.winAnimTimer) clearInterval(State.winAnimTimer);
+                State.winAnimTimer = setInterval(() => {
+                    if(i >= fullPath.length) {
+                        clearInterval(State.winAnimTimer);
+                        if (!showModal) {
+                            setTimeout(() => {
+                                UI.show('victoryOverlay');
+                                UI.playWinAnimation(true);
+                                State.isAnimatingWin = false; 
+                                if(State.winAnimTimer) clearInterval(State.winAnimTimer);
+                            }, 500);
+                        }
+                        return;
+                    }
+                    State.animPath.push(fullPath[i]);
+                    Renderer.drawMaze();
+                    i++;
+                }, 100);
+            },
+
+            setTab: (tab) => {
+                UI.hide('content-code'); UI.hide('content-tree');
+                UI.dom('tab-code').className = "flex-1 py-1.5 text-[10px] font-bold rounded text-slate-400 hover:text-white hover:bg-white/5 transition";
+                UI.dom('tab-tree').className = "flex-1 py-1.5 text-[10px] font-bold rounded text-slate-400 hover:text-white hover:bg-white/5 transition";
+                
+                UI.show(`content-${tab}`);
+                UI.dom(`tab-${tab}`).className = "flex-1 py-1.5 text-[10px] font-bold rounded text-white bg-indigo-600 shadow-md transition";
+            },
+
+            // Confirmation Modal Helpers
+            showConfirm: (size) => {
+                UI.setTxt('confirmSize', `${size}x${size}`);
+                UI.setTxt('confirmPoints', Config.points); 
+                UI.show('confirmModal');
+            },
+            hideConfirm: (confirmed) => {
+                UI.hide('confirmModal');
+                if (confirmed) {
+                    Config.size = State.pendingSize;
+                    UI.dom('lblSize').innerText = `${Config.size}x${Config.size}`;
+                    Game.requestGeneration();
+                } else {
+                    // Revert UI to old size
+                    UI.dom('inpSize').value = Config.size;
+                }
+            }
+        };
+
+        // --- 4. GRID LOGIC ---
+        const Grid = {
+            init: (sz) => Array(sz).fill().map(() => Array(sz).fill(0)),
+            
+            getNeighbors: (r, c) => {
+                const dirs = [[0,1], [0,-1], [1,0], [-1,0]];
+                let res = [];
+                for(let d of dirs) {
+                    let nr = r + d[0], nc = c + d[1];
+                    if(nr>=0 && nr<Config.size && nc>=0 && nc<Config.size) res.push({r:nr, c:nc});
+                }
+                return res;
+            },
+            
+            getDegree: (r, c) => {
+                return Grid.getNeighbors(r, c).filter(n => !State.visited.has(`${n.r},${n.c}`)).length;
+            },
+            
+            // Fast BFS for Connectivity
+            countComponents: (excludeR, excludeC) => {
+                const sz = Config.size;
+                let visitedBFS = new Set();
+                if(excludeR !== undefined) visitedBFS.add(`${excludeR},${excludeC}`);
+                State.visited.forEach(v => visitedBFS.add(v));
+                let components = 0;
+                let totalUnvisited = (sz*sz) - State.visited.size;
+                if (excludeR !== undefined) totalUnvisited--; 
+                if (totalUnvisited <= 0) return { count: 0 };
+                let cellsFound = 0;
+                let startNode = null;
+                outer: for(let r=0; r<sz; r++) {
+                    for(let c=0; c<sz; c++) {
+                        if(!visitedBFS.has(`${r},${c}`)) {
+                            startNode = {r,c};
+                            break outer;
+                        }
+                    }
+                }
+                if(!startNode) return { count: 0 };
+                let q = [startNode];
+                visitedBFS.add(`${startNode.r},${startNode.c}`);
+                cellsFound++;
+                components = 1;
+                while(q.length > 0) {
+                    let curr = q.shift();
+                    let ns = Grid.getNeighbors(curr.r, curr.c);
+                    for(let n of ns) {
+                        let k = `${n.r},${n.c}`;
+                        if(!visitedBFS.has(k)) {
+                            visitedBFS.add(k);
+                            cellsFound++;
+                            q.push(n);
+                        }
+                    }
+                }
+                if(cellsFound < totalUnvisited) return { count: 2 }; 
+                return { count: 1 };
+            },
+
+            hashGrid: () => JSON.stringify(State.grid) + `_SZ${Config.size}_PTS${Config.points}`,
+            manhattan: (a, b) => Math.abs(a.r - b.r) + Math.abs(a.c - b.c)
+        };
+
+        // --- 5. SOLVER ENGINE ---
+        const Solver = {
+            createGen: function* () {
+                const gridHash = Grid.hashGrid();
+                State.checkpoints = {};
+                let maxVal = 0;
+                State.finalCheckpointPos = null;
+                for(let r=0; r<Config.size; r++) for(let c=0; c<Config.size; c++) {
+                    if(State.grid[r][c] > 0) {
+                        State.checkpoints[State.grid[r][c]] = {r,c};
+                        maxVal = Math.max(maxVal, State.grid[r][c]);
+                    }
+                }
+                for(let r=0; r<Config.size; r++) for(let c=0; c<Config.size; c++) {
+                    if(State.grid[r][c] === maxVal) State.finalCheckpointPos = {r,c};
+                }
+
+                if(State.aiAgenda[gridHash]) {
+                    UI.log("Agenda Hit! Replaying...", "text-cyan-400 font-bold");
+                    UI.show('cacheBadge');
+                    State.isReplayingCache = true;
+                    yield* Solver.replaySolution(State.aiAgenda[gridHash]);
+                    return;
+                }
+                UI.hide('cacheBadge');
+
+                State.maxOps = Math.pow(Config.size, 6) * 3;
+                UI.updateStats();
+
+                let initialTarget = 2;
+                if (maxVal === 1) initialTarget = 999; 
+
+                // Strategy Selection
+                let algo = Config.algorithm;
+                if (algo === 'auto') {
+                    if (Config.size <= 4) algo = 'intermediate';
+                    else if (Config.size <= 5) algo = 'advanced';
+                    else algo = 'godlike';
+                }
+                UI.debug(`Strategy Active: ${algo.toUpperCase()}`);
+
+                yield* Solver.solveStep(initialTarget, maxVal, algo);
+            },
+
+            assessDifficulty: (path) => {
+                if (!path || path.length === 0) return 0;
+                let decisionPoints = 0;
+                let visitedSim = new Set();
+                for(let i=0; i<path.length-1; i++) {
+                    let curr = path[i];
+                    visitedSim.add(`${curr.r},${curr.c}`);
+                    let validNs = Grid.getNeighbors(curr.r, curr.c).filter(n => !visitedSim.has(`${n.r},${n.c}`));
+                    if (validNs.length > 1) decisionPoints++;
+                }
+                const rawScore = (decisionPoints / path.length) * 100 * (Config.size / 4);
+                return Math.min(100, Math.floor(rawScore));
+            },
+
+            replaySolution: function* (cachedPath) {
+                for(let i=1; i<cachedPath.length; i++) {
+                    const next = cachedPath[i];
+                    State.path.push(next);
+                    State.visited.add(`${next.r},${next.c}`);
+                    State.steps++;
+                    Renderer.drawMaze(); UI.updateStats();
+                    yield; 
+                }
+                State.finished = true;
+            },
+
+            // Heuristics
+            causesDeadEnd: (current, next) => {
+                State.visited.add(`${next.r},${next.c}`);
+                let strandFound = false;
+                const isStranded = (r, c) => {
+                    if (State.visited.has(`${r},${c}`)) return false;
+                    const deg = Grid.getNeighbors(r, c).filter(n => !State.visited.has(`${n.r},${n.c}`)).length;
+                    if (deg === 0) {
+                        if (State.finalCheckpointPos && r === State.finalCheckpointPos.r && c === State.finalCheckpointPos.c) {
+                            return false; 
+                        }
+                        return true;
+                    }
+                    return false;
+                };
+                let currentNeighbors = Grid.getNeighbors(current.r, current.c);
+                for(let n of currentNeighbors) {
+                    if (n.r === next.r && n.c === next.c) continue; 
+                    if (isStranded(n.r, n.c)) { strandFound = true; break; }
+                }
+                if (!strandFound) {
+                    let nextNeighbors = Grid.getNeighbors(next.r, next.c);
+                    for(let n of nextNeighbors) {
+                        if (isStranded(n.r, n.c)) { strandFound = true; break; }
+                    }
+                }
+                State.visited.delete(`${next.r},${next.c}`);
+                return strandFound;
+            },
+
+            solveStep: function* (nextCpVal, finalCpVal, algo) {
+                State.steps++;
+                if(State.steps > State.maxOps) {
+                    State.aborted = true;
+                    UI.log("Solver Timeout.", "text-red-400");
+                    return false;
+                }
+
+                if (State.path.length === 0) return false;
+                const currentStep = State.path.length; 
+                const currentCell = State.path[currentStep - 1];
+                const totalCells = Config.size * Config.size;
+
+                // Win Condition
+                if (currentStep === totalCells) {
+                    const onGridVal = State.grid[currentCell.r][currentCell.c];
+                    if (onGridVal === finalCpVal) {
+                        State.finished = true;
+                        State.aiAgenda[Grid.hashGrid()] = [...State.path];
+                        UI.debug("Solution Found!");
+                        return true;
+                    }
+                    return false; 
+                }
+
+                // Advanced/Godlike Checks
+                if (algo === 'godlike' || algo === 'advanced') {
+                    if (State.finalCheckpointPos) {
+                        const distToEnd = Grid.manhattan(currentCell, State.finalCheckpointPos);
+                        const stepsRemaining = totalCells - currentStep;
+                        if (distToEnd % 2 !== stepsRemaining % 2) return false;
+                        if (distToEnd > stepsRemaining) return false;
+                    }
+                }
+
+                // Godlike Checks (Expensive)
+                if (algo === 'godlike') {
+                    if (Config.size >= 5 && State.steps % 10 === 0) {
+                        const comps = Grid.countComponents();
+                        if (comps.count > 1) return false; 
+                    }
+                }
+
+                let neighbors = Grid.getNeighbors(currentCell.r, currentCell.c);
+                let validMoves = [];
+                let forcedMove = null;
+
+                for (let n of neighbors) {
+                    if (State.visited.has(`${n.r},${n.c}`)) continue;
+                    const nVal = State.grid[n.r][n.c];
+                    if (nVal > 0) {
+                        if (nVal === nextCpVal) { } 
+                        else if (nVal === finalCpVal) { if (currentStep + 1 !== totalCells) continue; } 
+                        else { if (nVal > nextCpVal) continue; }
+                    }
+                    
+                    // Godlike: Dead End Lookahead
+                    if (algo === 'godlike' && Solver.causesDeadEnd(currentCell, n)) continue;
+
+                    validMoves.push(n);
+                }
+
+                // Sorting
+                if (algo === 'basic') {
+                    validMoves.sort(() => Math.random() - 0.5); // Random blind
+                } else if (algo === 'intermediate' || algo === 'advanced' || algo === 'godlike') {
+                     validMoves.sort((a, b) => {
+                        const degA = Grid.getDegree(a.r, a.c);
+                        const degB = Grid.getDegree(b.r, b.c);
+                        if (degA !== degB) return degA - degB;
+                        // Tie breaker
+                        if (algo !== 'intermediate') {
+                             let sumA = 0; Grid.getNeighbors(a.r, a.c).forEach(n => { if(!State.visited.has(`${n.r},${n.c}`)) sumA += Grid.getDegree(n.r, n.c); });
+                             let sumB = 0; Grid.getNeighbors(b.r, b.c).forEach(n => { if(!State.visited.has(`${n.r},${n.c}`)) sumB += Grid.getDegree(n.r, n.c); });
+                             return sumA - sumB;
+                        }
+                        return 0;
+                    });
+                }
+
+                for (let next of validMoves) {
+                    State.path.push(next);
+                    State.visited.add(`${next.r},${next.c}`);
+                    State.visitCounts[next.r][next.c]++;
+                    const nVal = State.grid[next.r][next.c];
+                    let nextTarget = nextCpVal;
+                    if (nVal === nextCpVal) nextTarget++;
+
+                    const refreshRate = Config.size > 5 ? 50 : 2;
+                    if(State.steps % refreshRate === 0) {
+                        Renderer.drawMaze(); UI.updateStats(); yield;
+                    }
+
+                    if (yield* Solver.solveStep(nextTarget, finalCpVal, algo)) return true;
+
+                    if (State.aborted) return false;
+                    State.path.pop();
+                    State.visited.delete(`${next.r},${next.c}`);
+                    Solver.recordFailure(State.path.length);
+                }
+                return false;
+            },
+
+            recordFailure: (depth) => {
+                State.failures++;
+                if (State.failedNodes.length > 50) State.failedNodes.shift();
+                State.failedNodes.push({ depth: depth, time: Date.now() });
+            }
+        };
+
+        // --- 6. GAME CONTROLLER ---
+        const Game = {
+            init: () => {
+                Renderer.init();
+                Game.setupListeners();
+                UI.switchMode = Game.switchMode;
+                State.grid = Grid.init(Config.size);
+                UI.updateAlgoDesc('auto');
+                Game.requestGeneration();
+            },
+
+            setupListeners: () => {
+                UI.dom('inpSize').addEventListener('input', e => {
+                    const newSize = parseInt(e.target.value);
+                    UI.dom('lblSize').innerText = `${newSize}x${newSize}`;
+                });
+                
+                // Trigger Confirmation on Change (Release)
+                UI.dom('inpSize').addEventListener('change', e => {
+                    const newSize = parseInt(e.target.value);
+                    State.pendingSize = newSize;
+                    UI.showConfirm(newSize);
+                });
+                
+                // Fixed: Only update label on input, don't generate (prevents lag)
+                UI.dom('inpPoints').addEventListener('input', e => {
+                    const val = parseInt(e.target.value);
+                    Config.points = val;
+                    UI.dom('lblPoints').innerText = val;
+                });
+
+                // Fixed: Generate on release (change)
+                UI.dom('inpPoints').addEventListener('change', e => {
+                    Game.requestGeneration();
+                });
+                
+                const cvs = Renderer.cvs;
+                cvs.addEventListener('mousedown', Game.handleManualClick);
+            },
+
+            changeAlgorithm: () => {
+                const sel = UI.dom('algoSelect');
+                Config.algorithm = sel.value;
+                UI.updateAlgoDesc(sel.value);
+            },
+
+            switchMode: (mode) => {
+                Config.mode = mode;
+                const isAuto = mode === 'auto';
+                
+                UI.dom('modeAuto').className = isAuto 
+                    ? "px-3 py-1 text-[10px] font-bold rounded text-white bg-indigo-600 shadow transition"
+                    : "px-3 py-1 text-[10px] font-bold rounded text-slate-400 hover:text-white transition";
+                
+                UI.dom('modeManual').className = !isAuto 
+                    ? "px-3 py-1 text-[10px] font-bold rounded text-white bg-indigo-600 shadow transition"
+                    : "px-3 py-1 text-[10px] font-bold rounded text-slate-400 hover:text-white transition";
+
+                if (isAuto) {
+                    UI.show('aiControls'); UI.hide('manualControls');
+                    UI.dom('algoSelect').disabled = false;
+                    UI.dom('algoSelect').classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    UI.hide('aiControls'); UI.show('manualControls');
+                    UI.dom('algoSelect').disabled = true;
+                    UI.dom('algoSelect').classList.add('opacity-50', 'cursor-not-allowed');
+                }
+                Game.reset();
+            },
+
+            requestGeneration: () => {
+                UI.show('genSpinner');
+                UI.dom('btnGen').disabled = true;
+                setTimeout(() => Game.generateNewAsync(), 50);
+            },
+
+            generateNewAsync: async () => {
+                Game.stop();
+                resetState();
+                State.isGenerating = true; // Flag on
+                State.grid = Grid.init(Config.size);
+                
+                let path = [];
+                const sz = Config.size;
+                const totalCells = sz * sz;
+                
+                // Helper: Get neighbors based on phase strategy
+                const getSortedNeighbors = (r, c, visited, mode) => {
+                     let ns = Grid.getNeighbors(r, c).filter(n => !visited.has(`${n.r},${n.c}`));
+                     
+                     if (mode === 'random') {
+                         ns.sort(() => Math.random() - 0.5); 
+                     } else {
+                         // Warnsdorff
+                         ns.sort((a,b) => {
+                             let da = Grid.getNeighbors(a.r, a.c).filter(x => !visited.has(`${x.r},${x.c}`)).length;
+                             let db = Grid.getNeighbors(b.r, b.c).filter(x => !visited.has(`${x.r},${x.c}`)).length;
+                             
+                             const diff = da - db;
+                             // Phase 1: Complex (noise)
+                             if (mode === 'complex') return diff + (Math.random() * 2 - 1);
+                             // Phase 3: Force (Strict)
+                             return diff; 
+                         });
+                     }
+                     return ns;
+                };
+
+                let attempts = 0;
+                const maxAttempts = 500; // Phase 1: 1-50, Phase 2: 51-100, Phase 3: 101-500
+                let ops = 0;
+                const startTime = Date.now();
+                const timeoutMs = 60000; // Increased timeout for deep searches
+
+                // Force grid parity compliance for start point
+                // On odd grids (e.g. 7x7), start must match parity of majority color
+                const isOddGrid = (sz % 2 !== 0);
+                const blackCount = Math.floor(totalCells / 2);
+                const whiteCount = totalCells - blackCount; // White is majority on 3x3 (5W, 4B)
+                // Color convention: (r+c)%2 === 0 is White.
+
+                while (attempts < maxAttempts && State.isGenerating) {
+                    attempts++;
+                    
+                    let genMode = 'complex';
+                    let statusLabel = "";
+                    if (attempts > 50) { genMode = 'random'; statusLabel = "R"; }
+                    if (attempts > 100) { genMode = 'force'; statusLabel = "F"; }
+
+                    // UI Feedback
+                    if (attempts === 51) UI.setGenButtonText("RETRYING...");
+                    if (attempts === 101) UI.setGenButtonText("FORCING...");
+
+                    let startR = Math.floor(Math.random() * sz);
+                    let startC = Math.floor(Math.random() * sz);
+
+                    // Ensure valid start parity for odd grids in "Force" mode to guarantee success
+                    if (isOddGrid && genMode === 'force') {
+                        if ((startR + startC) % 2 !== 0) { // If Black (Minority)
+                            // Shift to White (Majority)
+                            if (startC + 1 < sz) startC++; else startR = (startR + 1) % sz;
+                        }
+                    }
+                    
+                    // Iterative State
+                    const stack = [];
+                    const visited = new Set();
+                    
+                    visited.add(`${startR},${startC}`);
+                    stack.push({
+                        r: startR, 
+                        c: startC, 
+                        neighbors: getSortedNeighbors(startR, startC, visited, genMode)
+                    });
+
+                    // Inner DFS Loop
+                    while (stack.length > 0 && State.isGenerating) {
+                        ops++;
+                        
+                        // Safety Yield
+                        if (ops % 500 === 0) {
+                            // Monotonic progress calculation
+                            // Scale 0-500 attempts linearly
+                            const totalProgress = (attempts / maxAttempts) * 100;
+                            UI.updateGenProgress(totalProgress, statusLabel);
+                            await new Promise(r => setTimeout(r, 0));
+                        }
+                        
+                        // Break long single attempts
+                        if (ops > 1000000) break; // Hard limit per attempt
+
+                        const curr = stack[stack.length - 1];
+
+                        if (curr.neighbors.length === 0) {
+                            // Dead End
+                            if (stack.length === totalCells) {
+                                // Success!
+                                path = stack.map(n => ({r: n.r, c: n.c}));
+                                break; 
+                            }
+                            // Backtrack
+                            const pop = stack.pop();
+                            visited.delete(`${pop.r},${pop.c}`);
+                        } else {
+                            // Move Forward
+                            const next = curr.neighbors.pop();
+                            visited.add(`${next.r},${next.c}`);
+                            stack.push({
+                                r: next.r, 
+                                c: next.c, 
+                                neighbors: getSortedNeighbors(next.r, next.c, visited, genMode)
+                            });
+                        }
+                    }
+                    
+                    if (path.length === totalCells) break;
+                    
+                    // Reset ops for next attempt to avoid false timeouts
+                    ops = 0;
+                    await new Promise(r => setTimeout(r, 0));
+                }
+
+                State.isGenerating = false;
+                UI.updateGenProgress(100);
+                
+                if (path.length === totalCells) {
+                    if (Config.points > 0) {
+                        State.grid[path[0].r][path[0].c] = 1;
+                        if (Config.points > 1) {
+                            let step = Math.floor((path.length - 1) / (Config.points - 1));
+                            for(let i=1; i<Config.points; i++) {
+                                let idx = (i === Config.points - 1) ? path.length - 1 : i * step;
+                                if (i < Config.points - 1) idx += Math.floor(Math.random() * 3) - 1;
+                                idx = Math.max(1, Math.min(path.length-1, idx));
+                                State.grid[path[idx].r][path[idx].c] = i + 1; 
+                            }
+                        }
+                    } else {
+                        State.grid[path[0].r][path[0].c] = 1;
+                    }
+                    const score = Solver.assessDifficulty(path);
+                    UI.setDifficulty(score);
+                } else {
+                    UI.toast("Generating failed, please try again");
+                }
+
+                UI.dom('btnGen').disabled = false;
+                Game.reset();
+                UI.hide('genSpinner');
+            },
+
+            reset: () => {
+                Game.stop(); resetState();
+                State.isGenerating = false; 
+                let startNode = null;
+                for(let r=0; r<Config.size; r++) for(let c=0; c<Config.size; c++) {
+                    if(State.grid[r][c] === 1) startNode = {r,c};
+                }
+                if(startNode) {
+                    State.path = [startNode];
+                    State.visited.add(`${startNode.r},${startNode.c}`);
+                }
+                UI.hide('victoryOverlay');
+                UI.hide('failOverlay');
+                if(Config.mode === 'auto') {
+                    State.gen = Solver.createGen();
+                }
+                Renderer.drawMaze(); Renderer.drawTree(); UI.updateStats();
+            },
+
+            step: () => {
+                if(Config.mode === 'auto' && !State.gen) return;
+                let res = State.gen.next();
+                if(res.done) {
+                    Game.stop();
+                    if(State.finished) UI.playWinAnimation();
+                    else UI.show('failOverlay');
+                }
+            },
+
+            togglePlay: () => { State.running ? Game.stop() : Game.start(); },
+            
+            start: () => {
+                if(State.finished) Game.reset();
+                State.running = true;
+                UI.setTxt('btnPlay', "PAUSE");
+                const speed = 10; 
+                const loop = () => { if(State.running) { Game.step(); if(!State.finished && !State.aborted) State.timer = setTimeout(loop, speed); }};
+                loop();
+            },
+
+            stop: () => {
+                State.running = false; clearTimeout(State.timer);
+                UI.setTxt('btnPlay', "RUN AI");
+            },
+
+            manualUndo: () => {
+                if(State.path.length <= 1) return;
+                let p = State.path.pop();
+                State.visited.delete(`${p.r},${p.c}`);
+                UI.hide('failOverlay');
+                Renderer.drawMaze();
+            },
+
+            handleManualClick: (e) => {
+                if(Config.mode !== 'manual' || State.finished) return;
+                const pos = UI.getGridPos(e);
+                if(!pos) return;
+                
+                const last = State.path[State.path.length-1];
+                const dr = pos.r - last.r;
+                const dc = pos.c - last.c;
+                
+                if (dr !== 0 && dc !== 0) {
+                    UI.toast("Invalid Move: Diagonal not allowed");
+                    return;
+                }
+                if (dr === 0 && dc === 0) return;
+                
+                const stepR = Math.sign(dr);
+                const stepC = Math.sign(dc);
+                
+                let currR = last.r + stepR;
+                let currC = last.c + stepC;
+                const cellsToAdd = [];
+                
+                let maxCP = 0;
+                State.path.forEach(p => maxCP = Math.max(maxCP, State.grid[p.r][p.c]));
+                
+                let finalCP = 0;
+                for(let r=0; r<Config.size; r++) for(let c=0; c<Config.size; c++) finalCP = Math.max(finalCP, State.grid[r][c]);
+
+                while (true) {
+                    if (State.visited.has(`${currR},${currC}`)) {
+                        UI.toast("Path Blocked!");
+                        return;
+                    }
+                    
+                    const val = State.grid[currR][currC];
+                    if (val > 0) {
+                        if (val === finalCP) {
+                            const projectedLen = State.path.length + cellsToAdd.length + 1;
+                            if (projectedLen < Config.size * Config.size) {
+                                UI.toast("Grid not full!");
+                                return;
+                            }
+                        } else if (val !== maxCP + 1) {
+                            UI.toast("Follow Order!");
+                            return;
+                        }
+                        maxCP = val; 
+                    }
+                    
+                    cellsToAdd.push({r: currR, c: currC});
+                    
+                    if (currR === pos.r && currC === pos.c) break;
+                    currR += stepR;
+                    currC += stepC;
+                }
+                
+                cellsToAdd.forEach(c => {
+                    State.path.push(c);
+                    State.visited.add(`${c.r},${c.c}`);
+                });
+                Renderer.drawMaze();
+                
+                if(State.path.length === Config.size * Config.size) {
+                    const head = State.path[State.path.length-1];
+                    if (State.grid[head.r][head.c] === finalCP) {
+                        State.finished = true;
+                        UI.playWinAnimation();
+                    }
+                }
+            },
+            
+            replayLastWin: () => {
+                if(!State.aiAgenda[Grid.hashGrid()]) return;
+                State.solutionPath = State.aiAgenda[Grid.hashGrid()];
+                UI.playWinAnimation(false);
+            },
+            startReview: () => {
+                State.isReviewing = true;
+                State.reviewIndex = 0;
+                State.solutionPath = State.aiAgenda[Grid.hashGrid()] || State.path;
+                UI.hide('victoryOverlay'); UI.show('reviewControls');
+                Game.updateReview();
+            },
+            reviewNav: (dir) => {
+                if(dir === 'next') State.reviewIndex++;
+                if(dir === 'prev') State.reviewIndex--;
+                if(dir === 'start') State.reviewIndex = 0;
+                if(dir === 'end') State.reviewIndex = State.solutionPath.length-1;
+                State.reviewIndex = Math.max(0, Math.min(State.reviewIndex, State.solutionPath.length-1));
+                Game.updateReview();
+            },
+            endReview: () => {
+                State.isReviewing = false;
+                UI.hide('reviewControls'); UI.show('victoryOverlay');
+                Renderer.drawMaze();
+            },
+            updateReview: () => {
+                const idx = State.reviewIndex;
+                const path = State.solutionPath.length > 0 ? State.solutionPath : State.path;
+                const max = path.length - 1;
+                UI.setTxt('revStepDisplay', idx + 1);
+                Renderer.drawMaze();
+                
+                const bNext = UI.dom('btnRevNext');
+                const isEnd = idx >= max;
+                if (isEnd) {
+                     bNext.disabled = true;
+                     bNext.className = "px-3 py-1 bg-amber-900/40 text-amber-600 border border-amber-800/30 rounded-md text-xs font-bold opacity-50 cursor-not-allowed";
+                } else {
+                     bNext.disabled = false;
+                     bNext.className = "px-3 py-1 bg-indigo-600 border border-indigo-500 text-white hover:bg-indigo-500 rounded-md transition text-xs font-bold";
+                }
+            },
+            getHint: () => {
+                UI.toast("Manual Only");
+            }
+        };
+
+        window.onload = Game.init;
+
+    </script>
+</body>
+</html>
